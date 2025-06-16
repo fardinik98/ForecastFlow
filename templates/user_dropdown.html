@@ -1,0 +1,40 @@
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAeK9x3ZAVTerYdYFJ26Qj1biUdtkbYak0",
+    authDomain: "forecastflow-3d1b6.firebaseapp.com",
+    projectId: "forecastflow-3d1b6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const docRef = doc(db, "users", user.email);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        document.getElementById("user-name").textContent = data.name || user.displayName || "User";
+        document.getElementById("user-email").textContent = data.email || user.email;
+        document.getElementById("user-name-text").textContent = data.name || user.displayName || "User";
+      }
+    }
+  });
+
+  ffunction logoutUser() {
+  signOut(auth)
+    .then(() => {
+      window.location.href = "/logout";
+    })
+    .catch((error) => {
+      console.error("Firebase logout error:", error);
+    });
+}
+
+
+</script>

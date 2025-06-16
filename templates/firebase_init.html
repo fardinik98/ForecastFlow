@@ -1,0 +1,56 @@
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc,
+    updateDoc,
+    arrayUnion
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAeK9x3ZAVTerYdYFJ26Qj1biUdtkbYak0",
+    authDomain: "forecastflow-3d1b6.firebaseapp.com",
+    projectId: "forecastflow-3d1b6",
+    storageBucket: "forecastflow-3d1b6.firebasestorage.app",
+    messagingSenderId: "934432615633",
+    appId: "1:934432615633:web:03043ce9878b8edca269f0",
+    measurementId: "G-895V651LSQ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
+
+  // Google Sign-In
+  const googleBtn = document.getElementById("google-btn");
+  if (googleBtn) {
+    googleBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        const userDoc = doc(db, "users", user.email);
+        await setDoc(userDoc, {
+          email: user.email,
+          name: user.displayName,
+          unit: "C",
+        }, { merge: true });
+
+        window.location.href = "/index";
+      } catch (error) {
+        alert("Google login failed: " + error.message);
+        console.error(error);
+      }
+    });
+  }
+</script>

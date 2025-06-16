@@ -1,0 +1,582 @@
+<script>
+  const OPENWEATHER_API_KEY = "bd5e378503939ddaee76f12ad7a97608";
+  const WEATHERBIT_API_KEY = "47876911410b4e149efc8de5d7e5878a";
+  const OPENCAGE_KEY = "93e25ebe4c0d4ef1aa7457a8fb2a2c1a";
+  let currentCity = "", currentTimezone = "UTC", unit = "metric", userEmail = "";
+
+  const unitLabelMap = { "metric": "C", "imperial": "F" };
+
+  function to12Hour(timestamp, timezone) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString("en-US", {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  function isLocationSaved(city) {
+  const saved = JSON.parse(localStorage.getItem("savedLocations") || "[]");
+  return saved.some(loc => loc.city.toLowerCase() === city.toLowerCase());
+}
+
+  async function updateMapAndSun(city) {
+  try {
+    const coordRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${city}&key=${OPENCAGE_KEY}`);
+    const coordData = await coordRes.json();
+    const { lat, lng } = coordData.results[0].geometry;
+    const timezoneName = coordData.results[0].annotations.timezone.name;
+    currentTimezone = timezoneName;
+
+    // Update map
+    document.getElementById("osm-map").src =
+      `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.05},${lat - 0.05},${lng + 0.05},${lat + 0.05}&layer=mapnik&marker=${lat},${lng}`;
+
+    // Update date
+    const now = new Date();
+    document.getElementById("date-text").textContent = now.toLocaleDateString("en-US", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: timezoneName
+    });
+
+    // Get sunrise/sunset data
+    const sunriseRes = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
+    const sunData = await sunriseRes.json();
+
+    // Properly convert and display sunrise/sunset times
+    document.getElementById("status-sunrise").textContent =
+      new Date(sunData.results.sunrise).toLocaleTimeString("en-US", {
+        timeZone: timezoneName,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
+    document.getElementById("status-sunset").textContent =
+      new Date(sunData.results.sunset).toLocaleTimeString("en-US", {
+        timeZone: timezoneName,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
+  } catch (e) {
+    console.warn("Map/Sunrise API Error:", e);
+  }
+}
+
+
+  async function fetchUserUnit() {
+  try {
+    const res = await fetch("/get_unit");
+    const data = await res.json();
+
+    unit = data.unit === "F" ? "imperial" : "metric";
+
+    const unitSwitch = document.getElementById("unit-switch");
+    if (unitSwitch) {
+      unitSwitch.checked = data.unit === "F";
+    }
+
+    const unitElement = document.getElementById("user-unit");
+    if (unitElement) {
+      unitElement.textContent = data.unit;
+    }
+
+    userEmail = data.email;
+  } catch (e) {
+    console.error("Unit fetch failed:", e);
+  }
+}
+
+
+  async function updateUnitPreference(newUnit) {
+    try {
+      const res = await fetch("/set_unit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unit: newUnit })
+      });
+      const data = await res.json();
+    } catch (e) {
+      console.error("Unit update failed:", e);
+    }
+  }
+
+  async function fetchHybridForecast(city, fromCard = false) {
+  try {
+    const query = city || currentCity;
+    if (!query) return;
+
+    const owmUnit = unit;
+    const wbUnit = unit === "metric" ? "M" : "I";
+
+    const [owmNowRes, owmForecastRes, wbHourlyRes, wbDailyRes] = await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?q=${query}&appid=${OPENWEATHER_API_KEY}&units=${owmUnit}`),
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${query}&appid=${OPENWEATHER_API_KEY}&units=${owmUnit}`),
+      fetch(`https://api.weatherbit.io/v2.0/forecast/hourly?city=${query}&hours=48&key=${WEATHERBIT_API_KEY}&units=${wbUnit}`),
+      fetch(`https://api.weatherbit.io/v2.0/forecast/daily?city=${query}&days=7&key=${WEATHERBIT_API_KEY}&units=${wbUnit}`)
+    ]);
+
+    const owmNow = await owmNowRes.json();
+    const owmForecast = await owmForecastRes.json();
+    const wbHourly = (await wbHourlyRes.json()).data;
+    const wbDaily = (await wbDailyRes.json()).data;
+
+    currentCity = owmNow.name;
+
+    // Current weather
+    document.getElementById("main-location").textContent = owmNow.name;
+    document.getElementById("sidebar-location").textContent = owmNow.name;
+    document.querySelector('.current-temp').textContent = `${Math.round(owmNow.main.temp)}°`;
+    document.querySelector('.condition').textContent = owmNow.weather[0].description;
+
+    // 🌤 Dynamic Background Update
+    const condition = owmNow.weather[0].main.toLowerCase();
+    document.body.className = document.body.className
+      .split(" ")
+      .filter(cls => !cls.endsWith("-bg"))
+      .join(" ");
+
+    if (condition.includes("clear") || condition.includes("sun")) {
+  document.body.classList.add("sunny-bg");
+} else if (condition.includes("cloud") || condition.includes("overcast")) {
+  document.body.classList.add("overcast-bg");
+} else if (condition.includes("rain")) {
+  document.body.classList.add("rainy-bg");
+} else if (condition.includes("storm") || condition.includes("thunder")) {
+  document.body.classList.add("stormy-bg");
+} else if (condition.includes("snow")) {
+  document.body.classList.add("snowy-bg");
+} else {
+  document.body.classList.add("default-bg");
+}
+
+
+    document.getElementById("status-humidity").textContent = `${owmNow.main.humidity}%`;
+    document.getElementById("status-wind").textContent = `${owmNow.wind.speed} ${unit === "metric" ? "m/s" : "mph"}`;
+
+    const todayWB = wbDaily[0];
+    if (todayWB) {
+      document.querySelector('.high-low').textContent =
+        `H: ${Math.round(todayWB.max_temp)}° / L: ${Math.round(todayWB.min_temp)}°`;
+    }
+
+    await updateMapAndSun(owmNow.name);
+    await saveRecentSearch(owmNow.name, owmNow.main.temp, owmNow.weather[0].description, currentCity);
+    await loadRecentSearches();
+    await loadSavedLocations();
+    await loadWeatherAlerts();
+    await loadAlertLocations();
+
+    const pinCheckbox = document.getElementById("pin-checkbox");
+if (pinCheckbox) {
+  pinCheckbox.checked = isLocationSaved(currentCity);
+  pinCheckbox.addEventListener("change", () => {
+    if (pinCheckbox.checked) {
+      togglePin(currentCity, owmNow.main.temp, owmNow.weather[0].description); 
+    } else {
+      unpinLocation(currentCity, owmNow.main.temp, owmNow.weather[0].description);
+    }
+  });
+}
+
+
+    const alertToggle = document.getElementById("alert-checkbox");
+    const alertRes = await fetch("/get_alert_cities");
+    const alertCities = await alertRes.json();
+    alertToggle.checked = alertCities.map(c => c.toLowerCase()).includes(owmNow.name.toLowerCase());
+
+    // Hourly Forecast
+    const hourlyContainer = document.querySelector(".hourly-forecast");
+    hourlyContainer.innerHTML = "";
+    wbHourly.slice(0, 24).forEach(hour => {
+      const card = document.createElement("div");
+      card.className = "hour-card";
+      const time = to12Hour(new Date(hour.timestamp_local).getTime() / 1000, currentTimezone);
+      const rainChance = hour.pop !== undefined ? `${Math.round(hour.pop)}%` : "0%";
+
+      card.innerHTML = `
+        <strong>${time}</strong><br>
+        <img src="https://www.weatherbit.io/static/img/icons/${hour.weather.icon}.png" width="30"><br>
+        ${Math.round(hour.temp)}°<br>
+        <small>💧 ${rainChance}</small>
+      `;
+      hourlyContainer.appendChild(card);
+    });
+
+    // Weekly Forecast
+    const weeklyContainer = document.querySelector(".weekly-forecast");
+    weeklyContainer.innerHTML = "";
+    wbDaily.forEach(day => {
+      const card = document.createElement("div");
+      card.className = "day";
+      const date = new Date(day.valid_date);
+      const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+      card.innerHTML = `
+        <p>${weekday}</p>
+        <img src="https://www.weatherbit.io/static/img/icons/${day.weather.icon}.png" width="30">
+        <p>${Math.round(day.max_temp)}° / ${Math.round(day.min_temp)}°</p>
+        <p>💧 ${day.pop}%</p>
+      `;
+      weeklyContainer.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error("Hybrid Weather Error:", err);
+  }
+}
+
+
+  async function togglePin(city, temp, condition) {
+  if (!city || !temp || !condition) return;
+
+  try {
+    const res = await fetch("/toggle_location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city, temp, condition })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      await loadSavedLocations();  // Refresh right panel list
+    } else {
+      alert(data.message || "Action failed.");
+    }
+  } catch (err) {
+    console.error("Toggle pin error:", err);
+  }
+}
+
+
+async function toggleAlert(city) {
+  if (!city) return;
+
+  try {
+    const res = await fetch("/toggle_alert_location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || "Failed to toggle alert.");
+    } else {
+      await loadWeatherAlerts();
+    }
+  } catch (err) {
+    console.error("Alert toggle failed", err);
+  }
+}
+
+
+
+  async function saveRecentSearch(city, temp, desc, currentCityVal) {
+    try {
+      await fetch("/update_recent_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city, temp, condition: desc, current_city: currentCityVal })
+      });
+    } catch (err) {
+      console.error("Save recent search failed", err);
+    }
+  }
+
+  async function loadRecentSearches() {
+    try {
+      const res = await fetch("/get_recent_searches");
+      const data = await res.json();
+      const filtered = data.filter(entry => entry.city.toLowerCase() !== currentCity.toLowerCase());
+      const container = document.getElementById("recent-searches");
+      const cardContainer = document.getElementById("recent-cards");
+      container.style.display = "none";
+      cardContainer.innerHTML = "";
+
+      if (filtered.length === 0) return;
+      container.style.display = "block";
+      filtered.slice(0, 4).forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "recent-card";
+        div.innerHTML = `
+          <strong>${entry.city}</strong><br>
+          ${Math.round(entry.temp)}°${unitLabelMap[unit]}<br>
+          <small>${entry.condition}</small>
+        `;
+        div.onclick = () => fetchHybridForecast(entry.city, true);
+        cardContainer.appendChild(div);
+      });
+    } catch (err) {
+      console.warn("Load recent failed", err);
+    }
+  }
+
+  async function loadWeatherAlerts() {
+  try {
+    const res = await fetch("/get_alert_cities");
+    const cities = await res.json();
+
+    const section = document.getElementById("alert-section");
+    const container = document.getElementById("alert-cards");
+    container.innerHTML = "";
+
+    if (!cities || cities.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+
+    let hasAlerts = false;
+
+    for (const city of cities) {
+      const alertRes = await fetch(`https://api.weatherbit.io/v2.0/alerts?city=${city}&key=${WEATHERBIT_API_KEY}`);
+      const alertData = await alertRes.json();
+
+      if (alertData.alerts && alertData.alerts.length > 0) {
+        hasAlerts = true;
+        alertData.alerts.forEach(alert => {
+          const card = document.createElement("div");
+          card.className = "alert-card";
+          card.innerHTML = `
+            <strong> ${city}</strong><br>
+            <strong>${alert.title}</strong><br>
+            <small>Severity: ${alert.severity}</small><br>
+            <small>⏰ ${formatDateTime(alert.effective_local)} → ${formatDateTime(alert.expires_local)}</small>
+            <p>${alert.description}</p>
+            <hr/>
+          `;
+          container.appendChild(card);
+        });
+      }
+    }
+
+    if (!hasAlerts) {
+      container.innerHTML = `
+        <p style="margin: 0; padding: 10px; font-weight: 500;">
+           Currently nothing to worry about in the selected cities!
+        </p>
+      `;
+    }
+
+    section.style.display = "block";
+
+  } catch (err) {
+    console.error("Failed to load alerts:", err);
+  }
+}
+
+
+function formatDateTime(datetimeStr) {
+  const dt = new Date(datetimeStr);
+  return dt.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+}
+
+  async function loadSavedLocations() {
+  try {
+    const res = await fetch("/get_saved_locations");
+    const data = await res.json();
+
+    const listContainer = document.getElementById("saved-list");
+    if (!listContainer) return;
+    listContainer.innerHTML = "";
+
+    if (data.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "No saved locations.";
+      listContainer.appendChild(li);
+      return;
+    }
+
+    data.forEach(entry => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>${entry.city}</strong><br>
+        ${Math.round(entry.temp)}°${unitLabelMap[unit]}<br>
+        <small>${entry.condition}</small>
+      `;
+      li.style.cursor = "pointer";
+      li.onclick = () => fetchHybridForecast(entry.city, true);
+      listContainer.appendChild(li);
+    });
+  } catch (err) {
+    console.warn("Load saved failed", err);
+  }
+}
+
+async function loadAlertLocations() {
+  try {
+    const res = await fetch("/get_alert_cities");
+    const data = await res.json();
+
+    const alertList = document.getElementById("alert-list");
+    if (!alertList) return;
+    alertList.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "No alert locations.";
+      alertList.appendChild(li);
+      return;
+    }
+
+    data.forEach(city => {
+      const li = document.createElement("li");
+      li.textContent = city;
+      li.style.cursor = "pointer";
+      li.onclick = () => fetchHybridForecast(city, true);
+      alertList.appendChild(li);
+    });
+  } catch (err) {
+    console.warn("Load alert locations failed", err);
+  }
+}
+
+
+
+  async function unpinLocation(city, temp, condition) {
+  try {
+    const res = await fetch("/toggle_location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city, temp, condition })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      await loadSavedLocations();
+
+      // ✅ Safely update UI if needed, but no more "pin-btn"
+      const pinCheckbox = document.getElementById("pin-checkbox");
+      if (pinCheckbox && currentCity.toLowerCase() === city.toLowerCase()) {
+        pinCheckbox.checked = false;
+      }
+    } else {
+      alert(data.message || "Unpin failed.");
+    }
+  } catch (err) {
+    console.error("Unpin error:", err);
+  }
+}
+
+
+
+
+  function handleCitySearch() {
+    const city = document.getElementById("city-input").value.trim();
+    if (city) fetchHybridForecast(city);
+  }
+
+  document.getElementById("city-input").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") handleCitySearch();
+  });
+
+  document.getElementById("city-input").addEventListener("input", async function () {
+    const query = this.value.trim();
+    const suggestionsEl = document.getElementById("suggestions");
+    suggestionsEl.innerHTML = "";
+    if (query.length < 2) return;
+
+    const res = await fetch(`https://api.teleport.org/api/cities/?search=${query}&limit=5`);
+    const data = await res.json();
+    data._embedded["city:search-results"].forEach(item => {
+      const div = document.createElement("div");
+      div.textContent = item.matching_full_name;
+      div.onclick = () => {
+        document.getElementById("city-input").value = item.matching_full_name.split(",")[0];
+        suggestionsEl.innerHTML = "";
+        handleCitySearch();
+      };
+      suggestionsEl.appendChild(div);
+    });
+  });
+
+  document.getElementById("unit-switch").addEventListener("change", async function () {
+    unit = this.checked ? "imperial" : "metric";
+    await updateUnitPreference(this.checked ? "F" : "C");
+    fetchHybridForecast(currentCity);
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+  const pinBtn = document.getElementById("pin-btn");
+  if (pinBtn) {
+    pinBtn.addEventListener("click", togglePin);
+  }
+});
+
+
+  document.getElementById("alert-checkbox").addEventListener("change", function () {
+  toggleAlert(currentCity);
+  });
+
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await fetchUserUnit();
+    await loadSavedLocations();
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const cageRes = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${OPENCAGE_KEY}`);
+          const cageData = await cageRes.json();
+          const components = cageData?.results?.[0]?.components || {};
+          const city = components.city || components.town || components.village || components.county || "Unknown";
+          currentCity = city;
+          document.getElementById("city-input").value = city;
+          fetchHybridForecast(city);
+        } catch (err) {
+          console.error("Geolocation failed:", err);
+          fetchHybridForecast("Dhaka");
+        }
+      },
+      (err) => {
+        console.warn("Geolocation error:", err);
+        fetchHybridForecast("Dhaka");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+</script>
+
+<script>
+  const slideTrigger = document.getElementById("user-name");
+  const rightPanel = document.getElementById("right-slide-panel");
+  const panelClose = document.getElementById("panel-close");
+
+  function toggleRightPanel() {
+    rightPanel.classList.toggle("active");
+  }
+
+  if (slideTrigger) {
+    slideTrigger.addEventListener("click", toggleRightPanel);
+  }
+
+  if (panelClose) {
+    panelClose.addEventListener("click", toggleRightPanel);
+  }
+  document.addEventListener("click", (e) => {
+    if (rightPanel.classList.contains("active") &&
+        !rightPanel.contains(e.target) &&
+        !slideTrigger.contains(e.target)) {
+      toggleRightPanel();
+    }
+  });
+</script>
+<script>
+  const searchToggle = document.getElementById("search-toggle");
+  const searchContainer = document.querySelector(".search-container");
+  const cityInput = document.getElementById("city-input");
+
+  searchToggle.addEventListener("click", () => {
+    searchContainer.classList.toggle("active");
+    if (searchContainer.classList.contains("active")) {
+      cityInput.focus();
+    }
+  });
+</script>
+
+

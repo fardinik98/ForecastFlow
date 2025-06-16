@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign Up | ForecastFlow</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-container">
+    <div class="branding">ForecastFlow</div>
+    <h2>Create Account</h2>
+
+    <form method="POST" action="/sign_up" onsubmit="return validatePasswords()">
+  <input type="text" name="name" placeholder="Full Name" required />
+  <input type="email" name="email" placeholder="Email" required />
+  <input type="password" id="password" name="password" placeholder="Password" required />
+  <input type="password" id="confirm_password" placeholder="Confirm Password" required />
+  <button type="submit" class="primary-btn">Sign Up</button>
+</form>
+
+<script>
+  function validatePasswords() {
+    const pw = document.getElementById('password').value;
+    const cpw = document.getElementById('confirm_password').value;
+    if (pw !== cpw) {
+      alert("Passwords do not match.");
+      return false;
+    }
+    return true;
+  }
+</script>
+
+    <div class="toggle-text">
+      Already have an account? <a href="/home">Login</a>
+    </div>
+  </div>
+
+  {% include 'firebase_init.html' %}
+</body>
+</html>
