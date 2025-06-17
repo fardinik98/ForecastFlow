@@ -210,7 +210,7 @@ body {
   text-align: center;
 }
 
-/* Auth Page Styles */
+/* Auth Page*/
 .auth-page {
   background: linear-gradient(to bottom right, #90caf9, #e3f2fd);
   display: flex;
@@ -327,8 +327,6 @@ body {
   background-color: #b71c1c;
 }
 
-
-/* Status box adjustment */
 .status-info {
   font-size: 14px;
   margin-bottom: 10px;
@@ -338,7 +336,6 @@ body {
   margin: 4px 0;
 }
 
-/* Hourly forecast horizontal scroll */
 .hourly-forecast {
   display: flex;
   overflow-x: auto;
@@ -358,7 +355,6 @@ body {
   font-size: 13px;
 }
 
-/* Weekly forecast horizontal scroll */
 .weekly-forecast {
   display: flex;
   justify-content: center;
@@ -390,8 +386,6 @@ body {
   color: #2d6cdf;
 }
 
-
-/* Scrollbar style (optional) */
 .hourly-forecast::-webkit-scrollbar,
 .weekly-forecast::-webkit-scrollbar {
   height: 6px;
@@ -475,7 +469,6 @@ body {
   padding: 12px 16px;
   width: 100%;
 }
-    /* Weather Backgrounds */
 
 body.sunny-bg {
   background-image: url('/static/images/sunny.jpg');
@@ -519,7 +512,6 @@ body.default-bg {
   background-repeat: no-repeat;
 }
 
-/* Smooth transition */
 body {
   transition: background-image 0.8s ease-in-out;
 }
@@ -535,8 +527,8 @@ body {
   justify-content: flex-end; /* align cards to the right */
   gap: 12px;
   flex-wrap: nowrap;
-  max-width: 50%; /* ✅ limit to half width */
-  margin-left: auto; /* push to right */
+  max-width: 50%; 
+  margin-left: auto;
 }
 
 .recent-card {
@@ -545,7 +537,7 @@ body {
   backdrop-filter: blur(8px);
   border-radius: 10px;
   padding: 10px;
-  width: 110px; /* ✅ smaller card */
+  width: 110px; 
   text-align: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   color: #000;
@@ -572,7 +564,6 @@ body {
   color: #333;
 }
 
-/* === Right Slide Panel === */
 .slide-panel {
   position: fixed;
   top: 0;
@@ -620,7 +611,7 @@ body {
   margin-top: 20px;
 }
 
-/* Toggle Switch Style */
+/* Toggle */
 .switch {
   position: relative;
   display: inline-block;
