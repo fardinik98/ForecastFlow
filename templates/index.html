@@ -21,7 +21,6 @@
           <p><strong>Sunset:</strong> <span id="status-sunset">--</span></p>
         </div>
       </div>
-
       <div class="area-select">
         <p class="section-title">Forecast Location</p>
         <iframe id="osm-map"
@@ -55,59 +54,42 @@
         <button id="user-name" class="slide-trigger user-trigger-btn">Hi,</button>
       </div>
     </div>
-
-
     <div id="right-slide-panel" class="slide-panel">
-
-    <span id="panel-close" class="panel-close" onclick="toggleRightPanel()">×</span>
-
-    <div class="panel-content">
-
-    <h3>Hi,<span id="user-name-text"></span></h3>
-    <p>Email:<span id="user-email">example@email.com</span></p>
-
-    <hr>
-
-    <h4> Saved Locations</h4>
-    <ul id="saved-list"></ul>
-
-    <h4> Alert Locations</h4>
-    <ul id="alert-list"></ul>
-
-    <h4> Settings</h4>
-
-    <div class="toggle-setting">
-      <label for="alert-checkbox">Alerts for this city</label>
-      <label class="switch">
-        <input type="checkbox" id="alert-checkbox">
-        <span class="slider round"></span>
-      </label>
-    </div>
-
-    <div class="toggle-setting">
-      <label for="unit-switch">Temperature Unit (°C / °F)</label>
-      <label class="switch">
-        <input type="checkbox" id="unit-switch">
-        <span class="slider round"></span>
-      </label>
-    </div>
-
-    <div class="toggle-setting">
-      <label for="pin-checkbox">Save this location</label>
-      <label class="switch">
-        <input type="checkbox" id="pin-checkbox">
-        <span class="slider round"></span>
-      </label>
-    </div>
-
-    <button onclick="logoutUser()" class="logout-btn">Logout</button>
-  </div>
-</div>
-
-
-
+      <span id="panel-close" class="panel-close" onclick="toggleRightPanel()">×</span>
+      <div class="panel-content">
+        <h3>Hi,<span id="user-name-text"></span></h3>
+        <p>Email:<span id="user-email">example@email.com</span></p>
+        <hr>
+        <h4> Saved Locations</h4>
+        <ul id="saved-list"></ul>
+        <h4> Alert Locations</h4>
+        <ul id="alert-list"></ul>
+        <h4> Settings</h4>
+        <div class="toggle-setting">
+          <label for="alert-checkbox">Alerts for this city</label>
+            <label class="switch">
+            <input type="checkbox" id="alert-checkbox">
+              <span class="slider round"></span>
+            </label>
+        </div>
+        <div class="toggle-setting">
+          <label for="unit-switch">Temperature Unit (°C / °F)</label>
+          <label class="switch">
+          <input type="checkbox" id="unit-switch">
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <div class="toggle-setting">
+          <label for="pin-checkbox">Save this location</label>
+          <label class="switch">
+            <input type="checkbox" id="pin-checkbox">
+              <span class="slider round"></span>
+          </label>
+        </div>
+        <button onclick="logoutUser()" class="logout-btn">Logout</button>
       </div>
-
+    </div>
+  </div>
       <div class="weather-info">
         <div class="main-temp-box">
             <div class="current-temp">--°</div>
@@ -118,7 +100,7 @@
             </div>
         </div>
       <div class="condition">Loading...</div>
-
+      
       <div class="recent-searches" id="recent-searches" style="display: none;">
         <h3>Recent Searches</h3>
         <div id="recent-cards" class="recent-cards-container">
