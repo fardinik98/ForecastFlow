@@ -16,7 +16,7 @@
   } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyAeK9x3ZAVTerYdYFJ26Qj1biUdtkbYak0",
+    apiKey: "Firebase API",
     authDomain: "forecastflow-3d1b6.firebaseapp.com",
     projectId: "forecastflow-3d1b6",
     storageBucket: "forecastflow-3d1b6.firebasestorage.app",
@@ -30,7 +30,6 @@
   const provider = new GoogleAuthProvider();
   const db = getFirestore(app);
 
-  // Google Sign-In
   const googleBtn = document.getElementById("google-btn");
   if (googleBtn) {
     googleBtn.addEventListener("click", async (e) => {
